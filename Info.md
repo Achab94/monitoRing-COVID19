@@ -34,7 +34,7 @@ La  presente piattaforma è organizzata secondo la seguente struttura
 La piattaforma è stata realizzata interamente in linguaggio **R**, utilizzando le funzionalità della libreria Shiny [(website)](https://shiny.rstudio.com). Altre librerie utilizzate sono `ggplot2` (per il data-visualization), `dplyr` (per il data-processing) e `shinyWidgets` (per alcuni dei widget inclusi).
 La piattaforma giace online sullo spazio di calcolo messo a disposizione da ShinyApps [(website)](https://www.shinyapps.io).
 
-A breve confido di poter rendere pubblicamente frubile l'intero codice utilizzato, sul [mio profilo GitHub](https://github.com/Achab94).
+L'intero codice utilizzato per realizzare questo portale è disponibile su [questa repository Github](https://github.com/Achab94/monitoRing-COVID19).
 
 ---
 
