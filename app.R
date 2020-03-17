@@ -9,7 +9,7 @@ library(rmarkdown)
 
 # instructions for updating
 # library(rsconnect)
-# rsconnect::deployApp("Dropbox/COVID-19/COVID-19/")
+# rsconnect::deployApp("Dropbox/COVID-19/COVID-19/monitoRing-COVID19/")
 
 # Definition of the User Interface ----------------------------------------
 
