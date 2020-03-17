@@ -1,9 +1,6 @@
 # monitoRing-COVID19
 Portale di monitoraggio dell'evoluzione dell'epidemia COVID-19 in Italia.
 
-[![GitHub license](https://img.shields.io/badge/License-Creative%20Commons%20Attribution%204.0%20International-blue)](https://github.com/pcm-dpc/COVID-19/blob/master/LICENSE)
-[![GitHub commit](https://img.shields.io/github/last-commit/pcm-dpc/COVID-19)](https://github.com/pcm-dpc/COVID-19/commits/master)
-
 ## Descrizione 
 
 La presente directory fa riferimento al portale [https://achab94.shinyapps.io/covid-19/](https://achab94.shinyapps.io/covid-19/) accessibile online. 
