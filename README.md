@@ -5,7 +5,7 @@ Portale di monitoraggio dell'evoluzione dell'epidemia COVID-19 in Italia.
 
 La presente directory fa riferimento al portale [https://achab94.shinyapps.io/covid-19/](https://achab94.shinyapps.io/covid-19/). 
 
-Il suo scopo è quello di monitorare l'andamento nazionale dell'[epidemia COVID-19](http://www.salute.gov.it/nuovocoronavirus) sul territorio nazionale italiano, elaborando i dati pubblicamente disponibili sulla e quotidianamente aggiornati. Si prega di consultare il [sito della Protezione Civile](http://www.protezionecivile.it/attivita-rischi/rischio-sanitario/emergenze/coronavirus) per qualunque informazione circa i rischi e le misure di protezione legate all'espanzione dell'epidemia, e la [repository della Protezione Civile](https://github.com/pcm-dpc/COVID-19) per avere maggiori dettagli sui dati a disposizione online.
+Il suo scopo è quello di monitorare l'andamento nazionale dell'[epidemia COVID-19](http://www.salute.gov.it/nuovocoronavirus) sul territorio nazionale italiano, elaborando i dati pubblicamente disponibili e quotidianamente aggiornati dalla Protezione Civile. Si prega di consultare il [sito della Protezione Civile](http://www.protezionecivile.it/attivita-rischi/rischio-sanitario/emergenze/coronavirus) per qualunque informazione circa i rischi e le misure di protezione legate all'espanzione dell'epidemia, e la [repository della Protezione Civile](https://github.com/pcm-dpc/COVID-19) per avere maggiori dettagli sui dati a disposizione online.
 
 La realizzazione è stata motivata dalle seguenti ragioni:
 - Disporre di uno strumento **facilmente utilizzabile**, **gratuito** ed **usufruibile a tutti** che consentisse di elaborare la grande quantità di dati resa disponibile quotidianamente dalla Protezione Civile;
