@@ -9,7 +9,7 @@ library(rmarkdown)
 
 # instructions for updating
 # library(rsconnect)
-# rsconnect::deployApp("Dropbox/COVID-19/COVID-19/monitoRing-COVID19/")
+# rsconnect::deployApp("Dropbox/COVID-19/COVID-19/")
 
 # Definition of the User Interface ----------------------------------------
 
@@ -44,7 +44,7 @@ ui <- navbarPage(title = "Monitoraggio evoluzione COVID-19 in Italia",
                                       inputId = "selezionaRegioni", 
                                       label = "Seleziona la/e regione/i di interesse (max 4)", 
                                       choices = list("Nord Italia" = list("Lombardia", "Liguria", "Piemonte", "Valle d'Aosta", 
-                                                                          "Emilia Romagna", "Friuli Venezia Giulia", "Veneto"), ### TRENTINO ALTO ADIGE NON C'E'
+                                                                          "Emilia Romagna", "Friuli Venezia Giulia", "Veneto"), 
                                                      "Centro Italia" = list("Lazio", "Marche", "Toscana", "Umbria"),
                                                      "Sud Italia" = list("Abruzzo", "Basilicata", "Calabria",
                                                                          "Campania", "Molise", "Puglia"),
@@ -59,14 +59,17 @@ ui <- navbarPage(title = "Monitoraggio evoluzione COVID-19 in Italia",
                                       multiple = TRUE
                                   ),
                                   
+                                  helpText("NB: La regione Trentino Alto Adige non comunica i dati regionali aggregati, pertanto non appare tra le regioni selezionabili."),
+                                  
                                   radioButtons("selezionaVariabileRegioni", 
                                                label = "Seleziona la variabile d'interesse",
                                                choices = list("Pazienti attualmente positivi", "Pazienti deceduti", "Pazienti dimessi/guariti", 
-                                                              "Pazienti ricoverati con sintomi", "Pazienti in terapia intensiva", "Pazienti in isolamento domiciliare"), 
+                                                              "Pazienti ricoverati con sintomi", "Pazienti in terapia intensiva", "Pazienti in isolamento domiciliare",
+                                                              "Tamponi effettuati"), 
                                                selected = "Pazienti attualmente positivi"
                                   ),
                                   
-                                  materialSwitch(inputId = "giornalieroSiNo", 
+                                  materialSwitch(inputId = "giornalieroSiNoRegione", 
                                                  label = "Visualizza il dato giornaliero", 
                                                  status = "danger"),
                                   
@@ -115,6 +118,7 @@ ui <- navbarPage(title = "Monitoraggio evoluzione COVID-19 in Italia",
                                                      "Sardegna" = list("Cagliari", "Nuoro", "Oristano", "Sassari", "Sud Sardegna"),
                                                      "Sicilia" = list("Agrigento", "Caltanissetta", "Catania", "Enna", "Messina", "Palermo", "Ragusa", "Siracusa", "Trapani"),
                                                      "Toscana" = list( "Arezzo", "Firenze", "Grosseto", "Livorno", "Lucca", "Massa Carrara", "Pisa", "Pistoia", "Prato", "Siena"),
+                                                     "Trentino-Alto Adige" = list("Bolzano", "Trento"),
                                                      "Umbria" = list("Perugia", "Terni"),
                                                      "Valle d'Aosta" = list("Aosta"),
                                                      "Veneto" = list("Belluno", "Padova", "Rovigo", "Treviso", "Venezia", "Verona", "Vicenza")),
@@ -127,6 +131,13 @@ ui <- navbarPage(title = "Monitoraggio evoluzione COVID-19 in Italia",
                                       ), 
                                       multiple = TRUE
                                   ),
+                                  
+                                  materialSwitch(inputId = "giornalieroSiNoProvincia", 
+                                                 label = "Visualizza il dato giornaliero", 
+                                                 status = "danger"),
+                                  
+                                  helpText("Il grafico di sinistra mostra di default il conteggio comulato del totale dei positivi. Se si desidera visualizzare
+                                           l'andamento giornaliero (quanti nuovi casi positivi sono stati registrati ogni giorno), selezionare il pulsante."),
 
                                   uiOutput("selezionaGiornoProv"),
                                   
@@ -155,6 +166,7 @@ server <- function(input, output) {
     dataProvinceInput <- reactive({
         storicoProvince <- read.csv(file = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-province/dpc-covid19-ita-province.csv", stringsAsFactors = FALSE)
         storicoProvince <- subset(storicoProvince, denominazione_provincia!="In fase di definizione/aggiornamento")
+        storicoProvince$denominazione_regione[storicoProvince$denominazione_regione %in% list("P.A. Trento", "P.A. Bolzano")] <- "Trentino-Alto Adige"
         
         myProvince <- data.frame(data=as.Date(storicoProvince$data),
                                  Provincia = storicoProvince$denominazione_provincia,
@@ -180,6 +192,7 @@ server <- function(input, output) {
                                 ricoverati_con_sintomi = storicoRegioni$ricoverati_con_sintomi,
                                 terapia_intensiva = storicoRegioni$terapia_intensiva,
                                 isolamento_domiciliare = storicoRegioni$isolamento_domiciliare,
+                                tamponi = storicoRegioni$tamponi,
                                 x = (as.numeric(as.Date(storicoRegioni$data)) - min(as.numeric(as.Date(storicoRegioni$data))) + 1))
         myRegioni <- myRegioni %>%
             group_by(Regione) %>%
@@ -187,7 +200,8 @@ server <- function(input, output) {
                    diff_dimessi_guariti = diff(c(0, dimessi_guariti)),
                    diff_ricoverati_con_sintomi = diff(c(0, ricoverati_con_sintomi)),
                    diff_terapia_intensiva = diff(c(0, terapia_intensiva)),
-                   diff_isolamento_domiciliare = diff(c(0, isolamento_domiciliare)))
+                   diff_isolamento_domiciliare = diff(c(0, isolamento_domiciliare)),
+                   diff_tamponi = diff(c(0, tamponi)))
         myRegioni
     })
     
@@ -400,7 +414,7 @@ server <- function(input, output) {
     output$scatterRegionale <- renderPlot({
         myDataRegion <- subset(dataRegioniInput(), Regione %in% input$selezionaRegioni)
         
-        if(input$giornalieroSiNo){
+        if(input$giornalieroSiNoRegione){
             ### daily visualization
             if(input$selezionaVariabileRegioni == "Pazienti attualmente positivi") plotVar <- "nuovi_attualmente_positivi"
             if(input$selezionaVariabileRegioni == "Pazienti deceduti") plotVar <- "diff_deceduti"
@@ -408,6 +422,7 @@ server <- function(input, output) {
             if(input$selezionaVariabileRegioni == "Pazienti ricoverati con sintomi") plotVar <- "diff_ricoverati_con_sintomi"
             if(input$selezionaVariabileRegioni == "Pazienti in terapia intensiva") plotVar <- "diff_terapia_intensiva"
             if(input$selezionaVariabileRegioni == "Pazienti in isolamento domiciliare") plotVar <- "diff_isolamento_domiciliare"
+            if(input$selezionaVariabileRegioni == "Tamponi effettuati") plotVar <- "diff_tamponi"
         } else {
             ### global visualization
             if(input$selezionaVariabileRegioni == "Pazienti attualmente positivi") plotVar <- "totale_attualmente_positivi"
@@ -416,6 +431,7 @@ server <- function(input, output) {
             if(input$selezionaVariabileRegioni == "Pazienti ricoverati con sintomi") plotVar <- "ricoverati_con_sintomi"
             if(input$selezionaVariabileRegioni == "Pazienti in terapia intensiva") plotVar <- "terapia_intensiva"
             if(input$selezionaVariabileRegioni == "Pazienti in isolamento domiciliare") plotVar <- "isolamento_domiciliare"
+            if(input$selezionaVariabileRegioni == "Tamponi effettuati") plotVar <- "tamponi"
         }
         
         myDataRegionVariable <- myDataRegion[, c("data", "Regione", plotVar)]
@@ -428,7 +444,7 @@ server <- function(input, output) {
             scale_x_date(date_labels = "%d/%m", date_breaks = "1 day", minor_breaks = "1 day") +
             scale_y_continuous(breaks= pretty_breaks()) + 
             labs(x="", y="", title=paste0(input$selezionaVariabileRegioni, " (dato ",
-                                          if(input$giornalieroSiNo) "giornaliero)" else "cumulato)")) +
+                                          if(input$giornalieroSiNoRegione) "giornaliero)" else "cumulato)")) +
             theme(axis.text.x = element_text(angle=40, hjust=1),
                   legend.position = "bottom",
                   legend.title=element_blank(),
@@ -501,13 +517,25 @@ server <- function(input, output) {
     output$scatterProvinciale <- renderPlot({
         myDataProvince <- subset(dataProvinceInput(), Provincia %in% input$selezionaProvincie)
         
-        ggplot(myDataProvince, aes(x = data, y = totale_casi, color = Provincia)) +
+        if(input$giornalieroSiNoProvincia){
+            ### daily visualization
+            plotVar <- "diff_totale_casi"
+        } else {
+            ### global visualization
+            plotVar <- "totale_casi"
+        }
+        
+        myDataProvinceVariable <- myDataProvince[, c("data", "Provincia", plotVar)]
+        colnames(myDataProvinceVariable) <- c("data", "Provincia", "plotVar")
+        
+        ggplot(myDataProvinceVariable, aes(x = data, y = plotVar, color = Provincia)) +
             geom_point(size=3) +
             geom_line(size=1) +
             theme_bw() +
             scale_x_date(date_labels = "%d/%m", date_breaks = "1 day", minor_breaks = "1 day") +
             scale_y_continuous(breaks= pretty_breaks()) + 
-            labs(x="", y="", title="Totale casi di COVID-19 registrati (dato cumulato)") +
+            labs(x="", y="", title=paste0("Totale dei casi positivi", " (dato ",
+                                          if(input$giornalieroSiNoProvincia) "giornaliero)" else "cumulato)")) +
             theme(axis.text.x = element_text(angle=40, hjust=1),
                   legend.position = "bottom",
                   legend.title=element_blank(),
