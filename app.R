@@ -29,11 +29,11 @@ ui <- navbarPage(title = "Monitoraggio evoluzione COVID-19 in Italia",
                               tags$head(includeHTML(("google-analytics.html"))),
                               HTML('<meta name="viewport" content="width=1024">'),
                               fluidRow(column(width=4, plotOutput("scatterMonitoraggioITA")),
-                                       column(width=4, plotOutput("barPlotDeltaPercentualiITA")),
-                                       column(width=4, plotOutput("scatterRapportoDimessiGuaritiTotaleAttualmentePositiviITA"))),
-                              fluidRow(column(width=4, plotOutput("scatterNuoviAttualmentePositiviITA")),
-                                       column(width=4, plotOutput("scatterDecedutiITA")),
-                                       column(width=4, plotOutput("scatterDimessiGuaritiITA")))
+                                       column(width=4, plotOutput("datiGiornalieriITA")),
+                                       column(width=4, plotOutput("barPlotDeltaPercentualiITA"))),
+                              fluidRow(column(width=4, plotOutput("scatterRapportoDimessiGuaritiTotaleAttualmentePositiviITA")),
+                                       column(width=4, plotOutput("scatterRapportoTotalePositiviTamponi")),
+                                       column(width=4, plotOutput("barPlotTrattamento")))
                               
                           )
                  ),
@@ -156,9 +156,8 @@ ui <- navbarPage(title = "Monitoraggio evoluzione COVID-19 in Italia",
                               )
                           )
                  ),
-                 # tabPanel("Previsione di evoluzione")
                  
-                tabPanel("Info", includeMarkdown("Info.md"))
+                tabPanel("Informazioni", includeMarkdown("Info.md"))
 )
 
 
@@ -253,7 +252,7 @@ server <- function(input, output) {
     
     output$headerCruscotto <- reactive({
         ultimaData <- dataItaliaInput()$data[length(dataItaliaInput()$data)]
-        paste0(h1("La situazione attuale* in Italia:"), h5("* (aggiornata all'ultimo dato disponibile, ore 18:00 del ", day(ultimaData), "Marzo 2020)"))
+        paste0(h1("La situazione attuale* dell'epidemia CoVid-19 in Italia:"), h5("* (aggiornata all'ultimo dato disponibile, risalente alle ore 18:00 del ", day(ultimaData), "Marzo 2020)"))
     })
     
     output$summary <- reactive({
@@ -330,6 +329,63 @@ server <- function(input, output) {
                   legend.margin=margin(t=0, r=0, b=0, l=-1, unit="cm")) 
     })
     
+    output$barPlotDeltaPercentualiITA <- renderPlot({
+        myItalia <- dataItaliaInput()
+        delayDays <- 15
+        myItaliaRelDiffs <- data.frame(data=as.Date(tail(myItalia$data, delayDays)),
+                                       AttualmentePositivi = tail(diff(myItalia$totale_attualmente_positivi)/myItalia$totale_attualmente_positivi[-length(myItalia$totale_attualmente_positivi)], delayDays),
+                                       Deceduti = tail(diff(myItalia$deceduti)/myItalia$deceduti[-length(myItalia$deceduti)], delayDays),
+                                       DimessiGuariti = tail(diff(myItalia$dimessi_guariti)/myItalia$dimessi_guariti[-length(myItalia$dimessi_guariti)], delayDays),
+                                       TerapiaIntensiva = tail(diff(myItalia$terapia_intensiva)/myItalia$terapia_intensiva[-length(myItalia$terapia_intensiva)], delayDays))
+
+        myItaliaRelDiffsReshaped <- melt(myItaliaRelDiffs, id.vars = "data", measure.vars = c("AttualmentePositivi",
+                                                                                              "Deceduti",
+                                                                                              "DimessiGuariti",
+                                                                                              "TerapiaIntensiva"), variable.name = "Dimensione")
+        ggplot(myItaliaRelDiffsReshaped, aes(x=data, y=value)) + 
+            geom_bar(stat="identity", position="dodge", width=0.5) +
+            scale_y_continuous(labels = function(x) paste0("+", x*100, "%"),
+                               breaks= pretty_breaks()) +
+            scale_x_date(date_labels = "%d/%m", date_breaks = "1 day", minor_breaks = "1 day") +
+            theme_bw() +
+            facet_wrap(~Dimensione, ncol=1, scales="free_y",
+                       labeller = as_labeller(c(
+                           `AttualmentePositivi` = "Attualmente positivi",
+                           `Deceduti` = "Deceduti",
+                           `DimessiGuariti` = "Dimessi o guariti",
+                           `TerapiaIntensiva` = "Trattati in terapia intensiva"
+                       ))) +
+            labs(x="", y="", title=paste("Variazione % rispetto al giorno precedente (ultimi", delayDays, "giorni)")) +
+            theme(legend.position="none",
+                  axis.text.x=element_text(angle=40, hjust=1))
+    })
+    
+    output$datiGiornalieriITA <- renderPlot({
+        myItalia <- dataItaliaInput()
+        
+        myItaliaDiffs <- data.frame(data = myItalia$data,
+                                    nuovi_attualmente_positivi = myItalia$nuovi_attualmente_positivi,
+                                    diff_deceduti = myItalia$diff_deceduti,
+                                    diff_dimessi_guariti = myItalia$diff_dimessi_guariti,
+                                    diff_terapia_intensiva = myItalia$diff_terapia_intensiva)
+        
+        myItaliaDiffsReshaped <- melt(myItaliaDiffs, id.vars = "data", variable.name = "Variabile")
+        
+        ggplot(myItaliaDiffsReshaped, aes(x=data, y=value)) +
+            geom_line() + geom_smooth(size=0.75) + geom_point() +
+            scale_y_continuous(breaks = pretty_breaks()) +
+            scale_x_date(date_labels = "%d/%m", date_breaks = "1 day", minor_breaks = "1 day") +
+            facet_wrap(~Variabile, ncol=1, scales="free_y",
+                       labeller = as_labeller(c(
+                           `nuovi_attualmente_positivi` = "Attualmente positivi",
+                           `diff_deceduti` = "Deceduti",
+                           `diff_dimessi_guariti` = "Dimessi o guariti",
+                           `diff_terapia_intensiva` = "Trattati in terapia intensiva"
+                       ))) +
+            theme_bw() +
+            theme(axis.text.x = element_text(angle=40, hjust=1)) +
+            labs(x="", y="", title=paste("Monitoraggio complessivo COVID-19 (dato giornaliero)"))
+    })
     
     output$scatterRapportoDimessiGuaritiTotaleAttualmentePositiviITA <- renderPlot({
         ggplot(dataItaliaInput(), aes(data, dimessi_guariti/totale_attualmente_positivi)) +
@@ -343,73 +399,41 @@ server <- function(input, output) {
             theme(axis.text.x = element_text(angle=40, hjust=1))
     })
     
-    output$barPlotDeltaPercentualiITA <- renderPlot({
-        myItalia <- dataItaliaInput()
-        delayDays <- 7
-        myItaliaRelDiffs <- data.frame(data=as.Date(tail(myItalia$data, delayDays)),
-                                       AttualmentePositivi = tail(diff(myItalia$totale_attualmente_positivi)/myItalia$totale_attualmente_positivi[-length(myItalia$totale_attualmente_positivi)], delayDays),
-                                       Deceduti = tail(diff(myItalia$deceduti)/myItalia$deceduti[-length(myItalia$deceduti)], delayDays),
-                                       DimessiGuariti = tail(diff(myItalia$dimessi_guariti)/myItalia$dimessi_guariti[-length(myItalia$dimessi_guariti)], delayDays),
-                                       TerapiaIntensiva = tail(diff(myItalia$terapia_intensiva)/myItalia$terapia_intensiva[-length(myItalia$terapia_intensiva)], delayDays))
-
-        myItaliaRelDiffsReshaped <- melt(myItaliaRelDiffs, id.vars = "data", measure.vars = c("AttualmentePositivi",
-                                                                                              "Deceduti",
-                                                                                              "DimessiGuariti",
-                                                                                              "TerapiaIntensiva"), variable.name = "Dimensione")
-        ggplot(myItaliaRelDiffsReshaped, aes(x=data, y=value)) + 
-            geom_bar(stat="identity", position="dodge", width=0.5) +
-            #geom_point(size=2) + geom_line() + 
-            #scale_y_continuous(labels = scales::percent_format(accuracy = 1),
-            scale_y_continuous(labels = function(x) paste0("+", x*100, "%"),
-                               breaks= pretty_breaks()) +
-            scale_x_date(date_labels = "%d/%m", date_breaks = "1 day", minor_breaks = "1 day") +
-            theme(legend.position="none") +
-            theme_bw() +
-            facet_wrap(~Dimensione, ncol=1, scales="free_y",
-                       labeller = as_labeller(c(
-                           `AttualmentePositivi` = "Attualmente positivi",
-                           `Deceduti` = "Deceduti",
-                           `DimessiGuariti` = "Dimessi o guariti",
-                           `TerapiaIntensiva` = "Trattati in terapia intensiva"
-                       ))) +
-            labs(x="", y="", title=paste("Variazione % rispetto al giorno precedente (ultimi", delayDays, "giorni)"))
-    })
-    
-    output$scatterDimessiGuaritiITA <- renderPlot({
-        ggplot(dataItaliaInput(), aes(data, diff_dimessi_guariti)) +
+    output$scatterRapportoTotalePositiviTamponi <- renderPlot({
+        ggplot(dataItaliaInput(), aes(data, y=totale_casi/tamponi)) +
             geom_point(size=3) +
             geom_line() +
             geom_smooth(method = 'loess', se=T) +
             theme_bw() +
             scale_x_date(date_labels = "%d/%m", date_breaks = "1 day", minor_breaks = "1 day") +
-            scale_y_continuous(breaks= pretty_breaks()) + 
-            labs(x="", y="", title="Pazienti attualmente dimessi o guariti (dato giornaliero)") +
+            scale_y_continuous(breaks= pretty_breaks()) +
+            labs(x="", y="", title="Rapporto tra il numero di casi positivi totali ed il numero \ndi tamponi effettuato (dato cumulato)") +
             theme(axis.text.x = element_text(angle=40, hjust=1))
     })
     
-    output$scatterNuoviAttualmentePositiviITA <- renderPlot({
-        ggplot(dataItaliaInput(), aes(data, nuovi_attualmente_positivi)) +
-            geom_point(size=3) +
-            geom_line() +
-            geom_smooth(method = 'loess', se=T) +
-            theme_bw() +
+    output$barPlotTrattamento <- renderPlot({
+        myItaliaDiffs <- data.frame(data = dataItaliaInput()$data,
+                                    ricoverati_con_sintomi = dataItaliaInput()$ricoverati_con_sintomi,
+                                    terapia_intensiva = dataItaliaInput()$terapia_intensiva,
+                                    isolamento_domiciliare = dataItaliaInput()$isolamento_domiciliare)
+        
+        myItaliaDiffsReshaped <- melt(myItaliaDiffs, id.vars = "data", variable.name = "Variabile")
+        
+        ggplot(myItaliaDiffsReshaped, aes(x=data, y=value, fill=Variabile)) +
+            geom_bar(stat="identity", position = "stack") +
             scale_x_date(date_labels = "%d/%m", date_breaks = "1 day", minor_breaks = "1 day") +
             scale_y_continuous(breaks= pretty_breaks()) + 
-            labs(x="", y="", title="Pazienti positivi al COVID-19 (dato giornaliero)") +
-            theme(axis.text.x = element_text(angle=40, hjust=1))
+            labs(x="", y="", title="Trattamento sanitario per i pazienti contagiati (dato cumulato)") +
+            theme_bw() +
+            #scale_fill_discrete(labels=c("Ricoverati con sintomi", "Terapia intensiva", "Isolamento domiciliare")) +
+            scale_fill_brewer(palette="Set2", labels=c("Ricoverati con sintomi", "Terapia intensiva", "Isolamento domiciliare")) +
+            theme(legend.position="top",
+                  axis.text.x=element_text(angle=40, hjust=1),
+                  legend.title=element_blank(),
+                  legend.text=element_text(size=10),
+                  legend.margin=margin(t=0, r=0, b=0, l=-1, unit="cm"))
     })
     
-    output$scatterDecedutiITA <- renderPlot({
-        ggplot(dataItaliaInput(), aes(x=data, y=diff_deceduti)) +
-            geom_point(size=3) +
-            geom_line() +
-            geom_smooth(method = 'loess', se=T) +
-            theme_bw() +
-            scale_x_date(date_labels = "%d/%m", date_breaks = "1 day", minor_breaks = "1 day") +
-            scale_y_continuous(breaks= pretty_breaks()) + 
-            labs(x="", y="", title="Pazienti in cura deceduti (dato giornaliero)") +
-            theme(axis.text.x = element_text(angle=40, hjust=1))
-    })
     
     output$scatterRegionale <- renderPlot({
         myDataRegion <- subset(dataRegioniInput(), Regione %in% input$selezionaRegioni)

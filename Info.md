@@ -4,7 +4,7 @@
 
 ##### Autore
 
-La presente piattaforma è stata realizzata da Emanuele Degani [(web)](https://achab94.github.io).
+La presente piattaforma è stata realizzata da Emanuele Degani [(web)](https://achab94.github.io), dottorando presso il Dipartimento di Scienze Statistiche dell'Università di Padova.
 Suggerimenti, critiche e segnalazioni di eventuali bug sono caldamente suggerite all'indirizzo **degani [at] stat [dot] unipd [dot] it**.
 
 E' doveroso un ringraziamento ad Emanuele Aliverti, Pietro Belloni, Laura D'Angelo, Nicola Pilia, Stefano, Francesco Mancone per aver contribuito con suggerimenti e critiche preziose.
@@ -25,7 +25,7 @@ La  presente piattaforma è organizzata secondo la seguente struttura
   - **Evoluzione nazionale**: la schermata riassume gli ultimi dati disponibili a livello nazionale, e mostra alcuni grafici relativi alle serie storiche di alcune variabili d'interesse. Le curve blu corrispondono a stime *loess* nonparametriche dell'evoluzione del fenomeno, le bande grigie misurano il grado di confidenza della stima realizzata: indicativamente, servono ad avere un'idea di massima di come il fenomeno si è evoluto nel tempo.
   - **Evoluzione regionale**: la schermata consente di analizzare l'andamento del fenomeno, regione per regione. E' possibile selezionare le regioni che si intendono studiare/confrontare, la dimensione d'interesse, e se osservarne il conteggio cumulato (sommato giorno per giorno) o il conteggio parziale di ciascun giorno. E' possibile inoltre osservare l'evoluzione temporale della suddivisione nel trattamento dei pazienti risultati positivi al COVID-19.
   - **Evoluzione provinciale**: la schermata consente di analizzare l'andamento del numero totale di contagiati (unico dato disponibile sulla dimensione territoriale provinciale), provincia per provincia. E' possibile selezionare le province che si intendono studiare/confrontare, ed osservare l'evoluzione temporale di tale dato, confrontando le province selezionate con tutte le altre province appartenenti alla Regione di riferimento.
-  - **Info**: questa pagina.
+  - **Informazioni**: questa pagina.
 
 ---
 
