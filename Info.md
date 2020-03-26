@@ -1,43 +1,36 @@
-# Informazioni su questa piattaforma
+# Credits and informations
 
 ---
 
-##### Autore
+##### Author
 
-La presente piattaforma è stata realizzata da Emanuele Degani [(web)](https://achab94.github.io), dottorando presso il Dipartimento di Scienze Statistiche dell'Università di Padova.
-Suggerimenti, critiche e segnalazioni di eventuali bug sono caldamente suggerite all'indirizzo **degani [at] stat [dot] unipd [dot] it**.
+This platform was created by Emanuele Degani [(web)](https://achab94.github.io), PhD student at the Department of Statistical Sciences of the University of Padua. Suggestions, criticisms and reports of any bugs are strongly suggested at **degani [at] stat [dot] unipd [dot] it**.
 
-E' doveroso un ringraziamento ad Emanuele Aliverti, Pietro Belloni, Laura D'Angelo, Nicola Pilia, Stefano, Francesco Mancone per aver contribuito con suggerimenti e critiche preziose.
+A big thanks to Emanuele Aliverti, Pietro Belloni, Laura D'Angelo, Nicola Pilia, Stefano Corona, Francesco Mancone for having contributed with valuable suggestions and criticisms.
 
-**Update (16 Marzo 2020)** : nelle ultime ore ho registrato un elevato numero di accessi che ha compromesso l'usufruibilità del portale, viste le limitate risorse computazionali messe a disposizione dalla tariffa gratuita del server. Mi sono pertanto dovuto trovare costretto ad affittare maggiori risorse computazionali al provider (ShinyApps), per un costo mensile di 35 euro. Ho deciso di chiedere un'offerta libera a chiunque desiderasse contribuire alle spese, secondo le proprie disponibilità, tramite un [MoneyBox Paypal](https://paypal.me/pools/c/8nqxplRvVc) che si sarebbe automaticamente chiuso non appena la cifra necessaria sarebbe stata raggiunta (onde evitare di ricevere ulteriori offerte non necessarie). In meno di due ore la somma totale è stata raggiunta: questo è stato possibile grazie alle donazioni di Guido Milano, Gianpaolo Natale, Franco Bocci, Enrico Bonan, Fabio Comini, Stefano De Lazzari. Grazie di cuore.
+**Update (22nd March 2020)** : Giorgio Sestili, manager of the Facebook page [Coronavirus - Dati e Analisi Scientifiche](https://www.facebook.com/DatiAnalisiCoronavirus), interviewed me and we exchanged some words about this portal, on how it works and how it was born. I suggest you to follow their Facebook page to stay updated on scientifically reliable content on the evolution of the phenomenon. Sadly, that page and the following interview are both in italian.
 
----
+[![](http://img.youtube.com/vi/4lCxc4fH8Ws/0.jpg)](http://www.youtube.com/watch?v=4lCxc4fH8Ws "")
 
-##### Fonte dei dati
-
-La piattaforma preleva i dati in automatico, ogniqualvolta un utente accede, dall'ultima versione aggiornata del database [(link GitHub)](https://github.com/pcm-dpc/COVID-19) reso disponibile dalla Protezione Civile quotidianamente intorno alle h18:30, subito dopo la conferenza stampa del Capo del Dipartimento della Protezione Civile Angelo Borrelli. Si consiglia di consultare [questo link](https://github.com/pcm-dpc/COVID-19/blob/master/README.md) per ogni informazione sui dati disponibili e sul data-entry (questo perchè spesso alcuni dati giornalieri sono mancanti, o arrivano in ritardo).
+**Update (16th March 2020)** : in the last few hours I have recorded a high number of accesses which has compromised the usability of the portal, given the limited computational resources made available by the free rate of the server. I therefore found myself forced to rent more computational resources to the provider (ShinyApps), for a monthly cost of 35 euros. I decided to ask a free offer to anyone wishing to contribute to the expenses, according to their availability, through a [MoneyBox Paypal](https://paypal.me/pools/c/8nqxplRvVc) which would automatically close as soon as the amount necessary would have been achieved (to avoid receiving further unnecessary offers). In less than two hours the total amount was reached: this was possible thanks to the donations of Guido Milano, Gianpaolo Natale, Franco Bocci, Enrico Bonan, Fabio Comini, Stefano De Lazzari. Thank you so much.
 
 ---
 
-##### Funzionalità della piattaforma
+##### Data source
 
-La  presente piattaforma è organizzata secondo la seguente struttura
-  - **Evoluzione nazionale**: la schermata riassume gli ultimi dati disponibili a livello nazionale, e mostra alcuni grafici relativi alle serie storiche di alcune variabili d'interesse. Le curve blu corrispondono a stime *loess* nonparametriche dell'evoluzione del fenomeno, le bande grigie misurano il grado di confidenza della stima realizzata: indicativamente, servono ad avere un'idea di massima di come il fenomeno si è evoluto nel tempo.
-  - **Evoluzione regionale**: la schermata consente di analizzare l'andamento del fenomeno, regione per regione. E' possibile selezionare le regioni che si intendono studiare/confrontare, la dimensione d'interesse, e se osservarne il conteggio cumulato (sommato giorno per giorno) o il conteggio parziale di ciascun giorno. E' possibile inoltre osservare l'evoluzione temporale della suddivisione nel trattamento dei pazienti risultati positivi al COVID-19.
-  - **Evoluzione provinciale**: la schermata consente di analizzare l'andamento del numero totale di contagiati (unico dato disponibile sulla dimensione territoriale provinciale), provincia per provincia. E' possibile selezionare le province che si intendono studiare/confrontare, ed osservare l'evoluzione temporale di tale dato, confrontando le province selezionate con tutte le altre province appartenenti alla Regione di riferimento.
-  - **Informazioni**: questa pagina.
+The platform automatically takes the data, whenever a user logs in, from the latest updated version of the database [(link GitHub)](https://github.com/pcm-dpc/COVID-19) made available by the Civil Protection daily around at 18:30pm, immediately after the press conference of the Head of the Department of Civil Protection Angelo Borrelli. It is advisable to consult [this link](https://github.com/pcm-dpc/COVID-19/blob/master/README.md) for any information on the data available and on the data-entry (this is because often some data every day are missing, or arrive late).
 
 ---
 
-##### Come è stata realizzata
+##### How it was made
 
-La piattaforma è stata realizzata interamente in linguaggio **R**, utilizzando le funzionalità della libreria Shiny [(website)](https://shiny.rstudio.com). Altre librerie utilizzate sono `ggplot2` (per il data-visualization), `dplyr` (per il data-processing) e `shinyWidgets` (per alcuni dei widget inclusi).
-La piattaforma giace online sullo spazio di calcolo messo a disposizione da ShinyApps [(website)](https://www.shinyapps.io).
+The platform was created entirely in **R** language, using the features of the Shiny library [(website)](https://shiny.rstudio.com). Other libraries used are `ggplot2` and` ggiraph` (for interactive data-visualization), `dplyr` (for data-processing) and` shinyWidgets` (for some of the widgets included).
+The platform lies online on the computing space made available by ShinyApps [(website)](https://www.shinyapps.io).
 
-L'intero codice utilizzato per realizzare questo portale è disponibile su [questa repository Github](https://github.com/Achab94/monitoRing-COVID19).
+The whole code used to make this portal is available on [this Github repository](https://github.com/Achab94/monitoRing-COVID19).
 
 ---
 
-##### Licenza di utilizzo
+##### License to use
 
 ![GitHub license](https://img.shields.io/badge/License-Creative%20Commons%20Attribution%204.0%20International-blue)
