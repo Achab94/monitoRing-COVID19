@@ -14,6 +14,9 @@ library(DT)
 # library(rsconnect)
 # rsconnect::deployApp("Dropbox/COVID-19/COVID-19/")
 
+mydati_comune <- read.csv("comuni_settimana.csv", header = T)
+lista_comuni <- as.character(unique(mydati_comune$NOME_COMUNE))
+
 # Definition of the User Interface ----------------------------------------
 
 ui <- navbarPage(theme = shinytheme("flatly"),
@@ -28,7 +31,7 @@ ui <- navbarPage(theme = shinytheme("flatly"),
                                      style="padding:15px;")
                                   )
                               ),
-
+                          
                           fluidPage(
                               tags$head(includeHTML(("google-analytics.html")),
                                         tags$style(type="text/css", "text {font-family: arial, helvetica}")),
@@ -49,12 +52,12 @@ ui <- navbarPage(theme = shinytheme("flatly"),
                                       inputId = "selezionaRegioni",
                                       label = "Select the region(s) of interest (max 4)",
                                       choices = list("Northern Italy" = list("Lombardia", "Liguria", "Piemonte", "Valle d'Aosta",
-                                                                          "Emilia Romagna", "Friuli Venezia Giulia", "Veneto"),
+                                                                          "Emilia-Romagna", "Friuli Venezia Giulia", "Veneto"),
                                                      "Central Italy" = list("Lazio", "Marche", "Toscana", "Umbria"),
                                                      "Sourhern Italy" = list("Abruzzo", "Basilicata", "Calabria",
                                                                          "Campania", "Molise", "Puglia"),
                                                      "Insular" = list("Sardegna", "Sicilia")),
-                                      selected = c("Lombardia", "Emilia Romagna", "Veneto"),
+                                      selected = c("Lombardia", "Emilia-Romagna", "Veneto"),
                                       options = list(
                                           `actions-box` = FALSE,
                                           header = "Regions",
@@ -75,7 +78,8 @@ ui <- navbarPage(theme = shinytheme("flatly"),
                                                               "Hospitalized patients with symptoms",
                                                               "Intensive care patients",
                                                               "Home isolation patients",
-                                                              "Administered swabs"),
+                                                              "Administered swabs",
+                                                              "Rate between positives and swabs made"),
                                                selected = "Total positive cases"
                                   ),
 
@@ -118,7 +122,7 @@ ui <- navbarPage(theme = shinytheme("flatly"),
                                                      "Basilicata" = list("Matera", "Potenza"),
                                                      "Calabria" = list("Catanzaro", "Cosenza", "Crotone", "Reggio di Calabria", "Vibo Valentia"),
                                                      "Campania" = list("Avellino", "Benevento", "Caserta", "Napoli", "Salerno"),
-                                                     "Emilia Romagna" = list("Bologna", "Ferrara", "Forlì-Cesena", "Modena", "Parma", "Piacenza", "Ravenna", "Reggio nell'Emilia", "Rimini"),
+                                                     "Emilia-Romagna" = list("Bologna", "Ferrara", "Forlì-Cesena", "Modena", "Parma", "Piacenza", "Ravenna", "Reggio nell'Emilia", "Rimini"),
                                                      "Friuli Venezia Giulia" = list("Gorizia", "Pordenone", "Trieste", "Udine"),
                                                      "Lazio" = list("Frosinone", "Latina", "Rieti", "Roma", "Viterbo"),
                                                      "Liguria" = list("Genova", "Imperia", "La Spezia", "Savona"),
@@ -174,6 +178,34 @@ ui <- navbarPage(theme = shinytheme("flatly"),
                               )
                           )
                  ),
+                 tabPanel("Deaths in municipalities",
+                          sidebarLayout(
+                              sidebarPanel(
+                                  pickerInput(
+                                      inputId = "selezionaComune",
+                                      label = "Select the municipality of interest",
+                                      choices = lista_comuni,
+                                      selected = c("Bergamo"),
+                                      options = list(
+                                          `actions-box` = TRUE,
+                                          `live-search` = TRUE,
+                                          header = "Municipalities",
+                                          `max-options` = 1,
+                                          `max-options-text` = "Select the municipality"
+                                      ),
+                                      multiple = TRUE
+                                  ),
+                                  helpText("Notice not all the municipalities are available. This issue regards the structure of the original dataset provided by ISTAT. See https://www.istat.it/it/archivio/240401 for further informations.")
+                              ),
+                              
+                              mainPanel(tags$style(type="text/css",
+                                                   ".shiny-output-error { visibility: hidden; }",
+                                                   ".shiny-output-error:before { visibility: hidden; }"
+                              ),
+                              ggiraphOutput("graficoDecessiComunali")
+                              )
+                          )
+                 ),
                  tabPanel("Donations", div(style="margin-top:-2.5em", includeMarkdown("Donazioni.md"))),
                  tabPanel("Credits and informations", div(style="margin-top:-2.5em", includeMarkdown("Info.md")))
 )
@@ -201,8 +233,8 @@ server <- function(input, output) {
 
         myRegioni <- data.frame(data=as.Date(storicoRegioni$data),
                                 Regione = storicoRegioni$denominazione_regione,
-                                totale_attualmente_positivi = storicoRegioni$totale_attualmente_positivi,
-                                nuovi_attualmente_positivi = storicoRegioni$nuovi_attualmente_positivi,
+                                totale_attualmente_positivi = storicoRegioni$totale_positivi,
+                                nuovi_attualmente_positivi = storicoRegioni$variazione_totale_positivi,
                                 deceduti = storicoRegioni$deceduti,
                                 dimessi_guariti = storicoRegioni$dimessi_guariti,
                                 totale_casi = storicoRegioni$totale_casi,
@@ -219,7 +251,9 @@ server <- function(input, output) {
                    diff_terapia_intensiva = diff(c(0, terapia_intensiva)),
                    diff_isolamento_domiciliare = diff(c(0, isolamento_domiciliare)),
                    diff_totale_casi = diff(c(0, totale_casi)),
-                   diff_tamponi = diff(c(0, tamponi)))
+                   diff_tamponi = diff(c(0, tamponi)),
+                   totalratetamponi = round(totale_casi/tamponi, 4),
+                   dailyratetamponi = round(diff_totale_casi/diff_tamponi, 4))
         myRegioni
     })
 
@@ -227,8 +261,8 @@ server <- function(input, output) {
         storicoItalia <- read.csv(file = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv", stringsAsFactors = FALSE)
 
         myItalia <- data.frame(data=as.Date(storicoItalia$data),
-                               totale_attualmente_positivi = storicoItalia$totale_attualmente_positivi,
-                               nuovi_attualmente_positivi = storicoItalia$nuovi_attualmente_positivi,
+                               totale_attualmente_positivi = storicoItalia$totale_positivi,
+                               nuovi_attualmente_positivi = storicoItalia$variazione_totale_positivi,
                                deceduti = storicoItalia$deceduti,
                                diff_deceduti = diff(c(0, storicoItalia$deceduti)),
                                dimessi_guariti = storicoItalia$dimessi_guariti,
@@ -242,6 +276,7 @@ server <- function(input, output) {
                                isolamento_domiciliare = storicoItalia$isolamento_domiciliare,
                                diff_isolamento_domiciliare = diff(c(0, storicoItalia$isolamento_domiciliare)),
                                tamponi = storicoItalia$tamponi,
+                               diff_tamponi = diff(c(0, storicoItalia$tamponi)),
                                x = (as.numeric(as.Date(storicoItalia$data)) - min(as.numeric(as.Date(storicoItalia$data))) + 1))
         myItalia
     })
@@ -272,7 +307,7 @@ server <- function(input, output) {
 
     output$headerCruscotto <- reactive({
         ultimaData <- dataItaliaInput()$data[length(dataItaliaInput()$data)]
-        paste0(h1("The current* situation of the CoVid-19 epidemic in Italy:"), h5("* (updated to the latest available data, dating back to 18pm on", day(ultimaData), "March 2020)"))
+        paste0(h1("The current* situation of the CoVid-19 epidemic in Italy:"), h5("* (updated to the latest available data, dating back to 18pm on", day(ultimaData), "April 2020)"))
     })
 
     output$summary <- reactive({
@@ -348,11 +383,13 @@ server <- function(input, output) {
         myItaliaRelDiffs <- data.frame(data=as.Date(tail(myItalia$data, delayDays)),
                                        TotalePositivi = tail(diff(myItalia$totale_casi)/myItalia$totale_casi[-length(myItalia$totale_casi)], delayDays),
                                        Deceduti = tail(diff(myItalia$deceduti)/myItalia$deceduti[-length(myItalia$deceduti)], delayDays),
-                                       DimessiGuariti = tail(diff(myItalia$dimessi_guariti)/myItalia$dimessi_guariti[-length(myItalia$dimessi_guariti)], delayDays))
+                                       DimessiGuariti = tail(diff(myItalia$dimessi_guariti)/myItalia$dimessi_guariti[-length(myItalia$dimessi_guariti)], delayDays),
+                                       Tamponi = tail(diff(myItalia$tamponi)/myItalia$tamponi[-length(myItalia$tamponi)], delayDays))
 
         myItaliaRelDiffsReshaped <- melt(myItaliaRelDiffs, id.vars = "data", measure.vars = c("TotalePositivi",
                                                                                               "Deceduti",
-                                                                                              "DimessiGuariti"), variable.name = "Dimensione")
+                                                                                              "DimessiGuariti",
+                                                                                              "Tamponi"), variable.name = "Dimensione")
         gg_bar <- ggplot(myItaliaRelDiffsReshaped, aes(x=data, y=value)) +
             geom_bar_interactive(aes(tooltip=percent(value, 0.01)), stat="identity", position="dodge", width=0.5) +
             scale_y_continuous(labels = function(x) paste0("+", x*100, "%"),
@@ -363,7 +400,8 @@ server <- function(input, output) {
                        labeller = as_labeller(c(
                            `TotalePositivi` = "Total positive cases",
                            `Deceduti` = "Deceased",
-                           `DimessiGuariti` = "Discharged or healed"
+                           `DimessiGuariti` = "Discharged or healed",
+                           `Tamponi` = "Swabs"
                        ))) +
             labs(x="", y="", title=paste("% Variation from the previous day"), caption=paste("daily data (last", delayDays, "days)")) +
             theme(legend.position="none",
@@ -377,7 +415,8 @@ server <- function(input, output) {
         myItaliaDiffs <- data.frame(data = myItalia$data,
                                     diff_totale_casi = myItalia$diff_totale_casi,
                                     diff_deceduti = myItalia$diff_deceduti,
-                                    diff_dimessi_guariti = myItalia$diff_dimessi_guariti)
+                                    diff_dimessi_guariti = myItalia$diff_dimessi_guariti,
+                                    diff_tamponi = myItalia$diff_tamponi)
 
         myItaliaDiffsReshaped <- melt(myItaliaDiffs, id.vars = "data", variable.name = "Variabile")
 
@@ -389,7 +428,8 @@ server <- function(input, output) {
                        labeller = as_labeller(c(
                            `diff_totale_casi` = "Total positive cases",
                            `diff_deceduti` = "Deceased",
-                           `diff_dimessi_guariti` = "Discharged or healed"
+                           `diff_dimessi_guariti` = "Discharged or healed",
+                           `diff_tamponi` = "Swabs"
                        ))) +
             theme_bw() +
             theme(axis.title.x=element_blank()) +
@@ -411,7 +451,7 @@ server <- function(input, output) {
             geom_line() + geom_smooth(size=0.75, show.legend = F) +
             geom_point_interactive(aes(tooltip=percent(value, 0.01)), size=3) +
             scale_x_date(date_labels = "%d/%m", date_breaks = "3 days", minor_breaks = "1 day") +
-            scale_y_continuous(breaks= pretty_breaks(), labels=percent, limits = c(0, 0.15)) +
+            scale_y_continuous(breaks= pretty_breaks(), labels=percent, limits = c(0, 0.2)) +
             labs(x="", y="", title="Monitoring of healing and mortality rates", caption="total data") +
             theme_bw() +
             scale_color_brewer(breaks=c("tasso_dimessi_guariti", "tasso_deceduti"),
@@ -428,16 +468,15 @@ server <- function(input, output) {
     })
 
     output$scatterRapportoTotalePositiviTamponi <- renderggiraph({
-        gg_point <- ggplot(dataItaliaInput(), aes(data, y=totale_casi/tamponi)) +
+        gg_point <- ggplot(dataItaliaInput(), aes(data, y=diff_totale_casi/diff_tamponi)) +
             geom_smooth(method = 'loess', se=T) +
-            geom_point_interactive(aes(tooltip=percent(totale_casi/tamponi, 0.01)), size=3) +
+            geom_point_interactive(aes(tooltip=percent(diff_totale_casi/diff_tamponi, 0.01)), size=3) +
             geom_line() +
             theme_bw() +
             scale_x_date(date_labels = "%d/%m", date_breaks = "3 days", minor_breaks = "1 day") +
             scale_y_continuous(breaks= pretty_breaks(), labels=percent) +
-            labs(x="", y="", title="% of swabs performed positive", caption="total data") +
-            theme(
-                  axis.title.x=element_blank())
+            labs(x="", y="", title="Daily rate between new positives and swabs made", caption="daily data") +
+            theme(axis.title.x=element_blank())
 
         girafe(ggobj = gg_point)
     })
@@ -473,23 +512,25 @@ server <- function(input, output) {
         if(input$giornalieroSiNoRegione){
             ### daily visualization
             if(input$selezionaVariabileRegioni == "Total positive cases") plotVar <- "diff_totale_casi"
-            if(input$selezionaVariabileRegioni == "Currently positive patientsi") plotVar <- "nuovi_attualmente_positivi"
+            if(input$selezionaVariabileRegioni == "Currently positive patients") plotVar <- "nuovi_attualmente_positivi"
             if(input$selezionaVariabileRegioni == "Deceased patients") plotVar <- "diff_deceduti"
             if(input$selezionaVariabileRegioni == "Discharged/healed patients") plotVar <- "diff_dimessi_guariti"
             if(input$selezionaVariabileRegioni == "Hospitalized patients with symptoms") plotVar <- "diff_ricoverati_con_sintomi"
             if(input$selezionaVariabileRegioni == "Intensive care patients") plotVar <- "diff_terapia_intensiva"
             if(input$selezionaVariabileRegioni == "Home isolation patients") plotVar <- "diff_isolamento_domiciliare"
             if(input$selezionaVariabileRegioni == "Administered swabs") plotVar <- "diff_tamponi"
+            if(input$selezionaVariabileRegioni == "Rate between positives and swabs made") plotVar <- "dailyratetamponi"
         } else {
             ### global visualization
             if(input$selezionaVariabileRegioni == "Total positive cases") plotVar <- "totale_casi"
-            if(input$selezionaVariabileRegioni == "Currently positive patientsi") plotVar <- "totale_attualmente_positivi"
+            if(input$selezionaVariabileRegioni == "Currently positive patients") plotVar <- "totale_attualmente_positivi"
             if(input$selezionaVariabileRegioni == "Deceased patients") plotVar <- "deceduti"
             if(input$selezionaVariabileRegioni == "Discharged/healed patients") plotVar <- "dimessi_guariti"
             if(input$selezionaVariabileRegioni == "Hospitalized patients with symptoms") plotVar <- "ricoverati_con_sintomi"
             if(input$selezionaVariabileRegioni == "Intensive care patients") plotVar <- "terapia_intensiva"
             if(input$selezionaVariabileRegioni == "Home isolation patients") plotVar <- "isolamento_domiciliare"
             if(input$selezionaVariabileRegioni == "Administered swabs") plotVar <- "tamponi"
+            if(input$selezionaVariabileRegioni == "Rate between positives and swabs made") plotVar <- "totalratetamponi"
         }
 
         myDataRegionVariable <- myDataRegion[, c("data", "Regione", plotVar)]
@@ -507,7 +548,6 @@ server <- function(input, output) {
                   legend.text = element_text(size=13),
                   axis.title.x=element_blank(),
                   legend.margin=margin(t=-0.25, r=0, b=0, l=0, unit="cm"))
-            #+ scale_color_brewer(palette="Set4")
 
         girafe(ggobj = gg_point)
     })
@@ -669,7 +709,44 @@ server <- function(input, output) {
                       searching = T,
                       pageLength = 10)) %>% formatPercentage(columns = "Daily increase", digits = 2)
     })
-
+    
+    output$graficoDecessiComunali <- renderggiraph({
+        dati_comune <- subset(mydati_comune, NOME_COMUNE == input$selezionaComune, 
+                              select = c("SETTIMANA", "CLASSE_DI_ETA",
+                                         "TOTALE_2015", "TOTALE_2016", "TOTALE_2017",
+                                         "TOTALE_2018", "TOTALE_2019", "TOTALE_2020"))
+        colnames(dati_comune) <- c("Settimana", "Fascia", "2015", "2016", "2017", "2018", "2019", "2020")
+        
+        decessi_comune <- melt(dati_comune, id.vars = c("Settimana", "Fascia"), 
+                               measure.vars = c("2015", "2016", "2017", "2018", "2019", "2020"), 
+                               variable.name = "Year")
+        
+        morti_comune <- decessi_comune %>% 
+            group_by(Settimana, Year) %>% 
+            summarise(Morti=sum(value))
+        
+        morti_comune$NumeroSettimana <- 0
+        settimane <- c("01/01-11/01", "12/01-18/01", "19/01-25/01", "26/01-01/02", "02/02-08/02",
+                       "09/02-15/02", "16/02-22/02", "23/02-29/02", "01/03-07/03", "08/03-14/03", "15/03-21/03")
+        for(i in 1:length(settimane)) morti_comune$NumeroSettimana[morti_comune$Settimana == settimane[i]] <- i
+        
+        cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+        
+        gg_decessi <- ggplot(morti_comune, aes(x=NumeroSettimana, y=Morti, col=Year)) +
+            geom_point_interactive(aes(tooltip=Morti), size=3) + geom_line(size=1) +
+            scale_x_continuous(breaks = 1:length(settimane), labels=settimane) +
+            scale_colour_manual(values=cbPalette) +
+            scale_y_continuous(breaks= pretty_breaks()) +
+            labs(title=paste("Deaths in the first 11 weeks of the calendar year in", input$selezionaComune), caption="weekly data") +
+            theme_bw() + 
+            theme(legend.position = "bottom",
+                  axis.text.x=element_text(size=6),
+                  axis.title.x=element_blank(),
+                  axis.title.y=element_blank(),
+                  panel.grid.minor.x = element_blank()) +
+            guides(colour = guide_legend(nrow = 1))
+        girafe(ggobj = gg_decessi)
+    })
 }
 
 # Run the application
