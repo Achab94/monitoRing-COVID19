@@ -35,14 +35,23 @@ ui <- navbarPage(theme = shinytheme("flatly"),
                           fluidPage(
                               tags$head(includeHTML(("google-analytics.html")),
                                         tags$style(type="text/css", "text {font-family: arial, helvetica}")),
-                              fluidRow(splitLayout(cellWidths = c("33%", "33%", "33%"),
+                              fluidRow(splitLayout(cellWidths = c("49%", "49%"),
                                                    ggiraphOutput("scatterMonitoraggioITA"),
-                                                   ggiraphOutput("datiGiornalieriITA"),
-                                                   ggiraphOutput("barPlotDeltaPercentualiITA"))),
-                              fluidRow(splitLayout(cellWidths = c("33%", "33%", "33%"),
-                                                   ggiraphOutput("scatterRapportoTotalePositiviTamponi"),
+                                                   ggiraphOutput("datiGiornalieriITA"))),
+                              fluidRow(splitLayout(cellWidths = c("49%", "49%"),
+                                                   ggiraphOutput("barPlotDeltaPercentualiITA"),
+                                                   ggiraphOutput("scatterRapportoTotalePositiviTamponi"))),
+                              fluidRow(splitLayout(cellWidths = c("49%", "49%"),
                                                    ggiraphOutput("evoluzioneTassi"),
                                                    ggiraphOutput("barPlotTrattamento")))
+                              # fluidRow(splitLayout(cellWidths = c("33%", "33%", "33%"),
+                              #                      ggiraphOutput("scatterMonitoraggioITA"),
+                              #                      ggiraphOutput("datiGiornalieriITA"),
+                              #                      ggiraphOutput("barPlotDeltaPercentualiITA"))),
+                              # fluidRow(splitLayout(cellWidths = c("33%", "33%", "33%"),
+                              #                      ggiraphOutput("scatterRapportoTotalePositiviTamponi"),
+                              #                      ggiraphOutput("evoluzioneTassi"),
+                              #                      ggiraphOutput("barPlotTrattamento")))
                           )
                  ),
                  tabPanel("Regional evolution",
@@ -277,6 +286,8 @@ server <- function(input, output) {
                                diff_isolamento_domiciliare = diff(c(0, storicoItalia$isolamento_domiciliare)),
                                tamponi = storicoItalia$tamponi,
                                diff_tamponi = diff(c(0, storicoItalia$tamponi)),
+                               casi_testati = storicoItalia$casi_testati,
+                               diff_casi_testati = diff(c(0,storicoItalia$casi_testati)),
                                x = (as.numeric(as.Date(storicoItalia$data)) - min(as.numeric(as.Date(storicoItalia$data))) + 1))
         myItalia
     })
@@ -326,6 +337,10 @@ server <- function(input, output) {
         totale_casi_ultimo <- dataItaliaInput()$totale_casi[length(dataItaliaInput()$totale_casi)]
         totale_casi_penultimo <- dataItaliaInput()$totale_casi[length(dataItaliaInput()$totale_casi) - 1]
         delta_totale_casi <- diff(c(totale_casi_penultimo, totale_casi_ultimo))
+        
+        casi_testati_ultimo <- dataItaliaInput()$casi_testati[length(dataItaliaInput()$casi_testati)]
+        casi_testati_penultimo <- dataItaliaInput()$casi_testati[length(dataItaliaInput()$casi_testati) - 1]
+        delta_casi_testati <- diff(c(casi_testati_penultimo, casi_testati_ultimo))
 
         delta_dimessiguariti_attualmentepositivi <- diff(c(dimessi_guariti_penultimo/attualmente_positivi_penultimo, dimessi_guariti_ultimo/attualmente_positivi_ultimo))
         paste0("<ul>",
@@ -339,7 +354,10 @@ server <- function(input, output) {
               if(delta_dimessi_guariti > 0) "+" else "-", round(abs(delta_dimessi_guariti/dimessi_guariti_penultimo) * 100, 2), "% over the previous day, ", round(dimessi_guariti_ultimo/totale_casi_ultimo * 100, 2), "% of the total positive cases)",
               "</li>",
               "<li><b>Total positive cases: </b>", totale_casi_ultimo, " (",
-              if(delta_totale_casi > 0) "+" else "-", round(abs(delta_totale_casi/totale_casi_penultimo) * 100, 2), "% over the previous day)",
+              if(delta_totale_casi > 0) "+" else "-", round(abs(delta_totale_casi/totale_casi_penultimo) * 100, 2), "% over the previous day, ", round(totale_casi_ultimo/casi_testati_ultimo * 100, 2), "% of the total tested cases)",
+              "</li>",
+              "<li><b>Total tested cases: </b>", casi_testati_ultimo, " (",
+              if(delta_casi_testati > 0) "+" else "-", round(abs(delta_casi_testati/casi_testati_penultimo) * 100, 2), "% over the previous day. Notice this number is different from the total number of administered swabs)",
               "</li>",
               "</ul>
               <i>For an optimal consultation of this portal, which allows <b> interaction with the graphics </b>, it is advisable to access from desktop instead of mobile or tablet.</i>
@@ -352,7 +370,8 @@ server <- function(input, output) {
                                  measure.vars = c("totale_attualmente_positivi",
                                                   "deceduti",
                                                   "dimessi_guariti",
-                                                  "totale_casi"))
+                                                  "totale_casi",
+                                                  "terapia_intensiva"))
 
         gg_point <- ggplot(myItaliaReshaped) +
             geom_point_interactive(aes(x = data, y = value, color = variable, tooltip = value), size=2) +
@@ -360,20 +379,23 @@ server <- function(input, output) {
             scale_color_manual(values = c("totale_attualmente_positivi" = "red3",
                                           "dimessi_guariti" = "dodgerblue3",
                                           "deceduti" = "green4",
-                                          "totale_casi" = "black"),
+                                          "totale_casi" = "black",
+                                          "terapia_intensiva" = "pink4"),
                                labels = c("totale_attualmente_positivi" = "Currently positive",
                                           "dimessi_guariti" = "Discharged or healed",
                                           "deceduti" = "Deceased",
-                                          "totale_casi" = "Total positive cases")) +
-            theme_bw() +
+                                          "totale_casi" = "Total positive cases",
+                                          "terapia_intensiva" = "Intensive care treated")) +
+            theme_bw() + scale_y_continuous(trans = log10_trans(),
+                                            breaks = trans_breaks("log10", function(x) 10^x),
+                                            labels = trans_format("log10", math_format(10^.x))) +
             scale_x_date(date_labels = "%d/%m", date_breaks = "5 days", minor_breaks = "1 day") +
-            labs(x="", y="", title="Overall monitoring of COVID-19", caption = "total data") +
+            labs(x="", y="", title="Overall monitoring of COVID-19", caption = "total data (Log10 scale)") +
             theme(legend.position="bottom",
                   legend.title=element_blank(),
-                  legend.text=element_text(size=10),
                   axis.title.x=element_blank(),
-                  legend.margin=margin(t=0, r=0, b=0, l=-1.45, unit="cm"))
-        girafe_options(girafe(ggobj = gg_point), opts_toolbar(saveaspng=FALSE))
+                  legend.margin=margin(t=0, r=0, b=0, l=0, unit="cm"))
+        girafe_options(girafe(ggobj = gg_point, width_svg = 8, height_svg = 7), opts_toolbar(saveaspng=FALSE))
     })
 
     output$barPlotDeltaPercentualiITA <- renderggiraph({
@@ -383,12 +405,14 @@ server <- function(input, output) {
                                        TotalePositivi = tail(diff(myItalia$totale_casi)/myItalia$totale_casi[-length(myItalia$totale_casi)], delayDays),
                                        Deceduti = tail(diff(myItalia$deceduti)/myItalia$deceduti[-length(myItalia$deceduti)], delayDays),
                                        DimessiGuariti = tail(diff(myItalia$dimessi_guariti)/myItalia$dimessi_guariti[-length(myItalia$dimessi_guariti)], delayDays),
-                                       Tamponi = tail(diff(myItalia$tamponi)/myItalia$tamponi[-length(myItalia$tamponi)], delayDays))
+                                       Tamponi = tail(diff(myItalia$tamponi)/myItalia$tamponi[-length(myItalia$tamponi)], delayDays),
+                                       TerapiaIntensiva = tail(diff(myItalia$terapia_intensiva)/myItalia$terapia_intensiva[-length(myItalia$terapia_intensiva)], delayDays))
 
         myItaliaRelDiffsReshaped <- melt(myItaliaRelDiffs, id.vars = "data", measure.vars = c("TotalePositivi",
                                                                                               "Deceduti",
                                                                                               "DimessiGuariti",
-                                                                                              "Tamponi"), variable.name = "Dimensione")
+                                                                                              "Tamponi",
+                                                                                              "TerapiaIntensiva"), variable.name = "Dimensione")
         gg_bar <- ggplot(myItaliaRelDiffsReshaped, aes(x=data, y=value)) +
             geom_bar_interactive(aes(tooltip=percent(value, 0.01)), stat="identity", position="dodge", width=0.5) +
             scale_y_continuous(labels = scales::percent) +
@@ -399,12 +423,13 @@ server <- function(input, output) {
                            `TotalePositivi` = "Total positive cases",
                            `Deceduti` = "Deceased",
                            `DimessiGuariti` = "Discharged or healed",
-                           `Tamponi` = "Swabs"
+                           `Tamponi` = "Swabs",
+                           `TerapiaIntensiva` = "Intensive care treated"
                        ))) +
             labs(x="", y="", title=paste("Relative variation from the previous day"), caption=paste("daily data (last", delayDays, "days)")) +
             theme(legend.position="none",
                   axis.title.x=element_blank())
-        girafe_options(girafe(ggobj = gg_bar), opts_toolbar(saveaspng=FALSE))
+        girafe_options(girafe(ggobj = gg_bar, width_svg = 8, height_svg = 7), opts_toolbar(saveaspng=FALSE))
     })
 
     output$datiGiornalieriITA <- renderggiraph({
@@ -414,7 +439,8 @@ server <- function(input, output) {
                                     diff_totale_casi = myItalia$diff_totale_casi,
                                     diff_deceduti = myItalia$diff_deceduti,
                                     diff_dimessi_guariti = myItalia$diff_dimessi_guariti,
-                                    diff_tamponi = myItalia$diff_tamponi)
+                                    diff_tamponi = myItalia$diff_tamponi,
+                                    diff_terapia_intensiva = myItalia$diff_terapia_intensiva)
 
         myItaliaDiffsReshaped <- melt(myItaliaDiffs, id.vars = "data", variable.name = "Variabile")
 
@@ -426,13 +452,14 @@ server <- function(input, output) {
                            `diff_totale_casi` = "Total positive cases",
                            `diff_deceduti` = "Deceased",
                            `diff_dimessi_guariti` = "Discharged or healed",
-                           `diff_tamponi` = "Swabs"
+                           `diff_tamponi` = "Swabs",
+                           `diff_terapia_intensiva` = "Intensive care treated"
                        ))) +
             theme_bw() +
             theme(axis.title.x=element_blank()) +
-            labs(x="", y="", title=paste("Overall monitoring of COVID-19"), caption="total data")
+            labs(x="", y="", title=paste("Overall monitoring of COVID-19"), caption="daily data")
 
-        girafe_options(girafe(ggobj = gg_point), opts_toolbar(saveaspng=FALSE))
+        girafe_options(girafe(ggobj = gg_point, width_svg = 8, height_svg = 7), opts_toolbar(saveaspng=FALSE))
     })
 
     output$evoluzioneTassi <- renderggiraph({
@@ -456,11 +483,10 @@ server <- function(input, output) {
                               palette="Set1") +
             theme(legend.position="bottom",
                   legend.title=element_blank(),
-                  legend.text=element_text(size=10),
                   axis.title.x=element_blank(),
                   legend.margin=margin(t=0, r=0, b=0, l=-1, unit="cm"))
 
-        girafe_options(girafe(ggobj = gg_point), opts_toolbar(saveaspng=FALSE))
+        girafe_options(girafe(ggobj = gg_point, width_svg = 8, height_svg = 7), opts_toolbar(saveaspng=FALSE))
     })
 
     output$scatterRapportoTotalePositiviTamponi <- renderggiraph({
@@ -474,7 +500,18 @@ server <- function(input, output) {
             labs(x="", y="", title="Daily rate between new positives and swabs made", caption="daily data") +
             theme(axis.title.x=element_blank())
 
-        girafe_options(girafe(ggobj = gg_point), opts_toolbar(saveaspng=FALSE))
+        girafe_options(girafe(ggobj = gg_point, width_svg = 8, height_svg = 7), opts_toolbar(saveaspng=FALSE))
+        # gg_point <- ggplot(dataItaliaInput(), aes(data, y=diff_totale_casi/diff_casi_testati)) +
+        #     geom_smooth(method = 'loess', se=T) +
+        #     geom_point_interactive(aes(tooltip=percent(diff_totale_casi/diff_casi_testati, 0.01)), size=2) +
+        #     geom_line(size=0.5) +
+        #     theme_bw() +
+        #     scale_x_date(date_labels = "%d/%m", date_breaks = "5 days", minor_breaks = "1 day") +
+        #     scale_y_continuous(labels=percent) +
+        #     labs(x="", y="", title="Daily rate between new positives and person tested", caption="daily data") +
+        #     theme(axis.title.x=element_blank())
+        # 
+        # girafe_options(girafe(ggobj = gg_point, width_svg = 8, height_svg = 7), opts_toolbar(saveaspng=FALSE))
     })
 
     output$barPlotTrattamento <- renderggiraph({
@@ -488,16 +525,15 @@ server <- function(input, output) {
         gg_bar <- ggplot(myItaliaDiffsReshaped, aes(x=data, y=value, fill=Variabile)) +
             geom_bar_interactive(aes(tooltip=value), stat="identity", position = "stack") +
             scale_x_date(date_labels = "%d/%m", date_breaks = "5 days", minor_breaks = "1 day") +
-            labs(x="", y="", title="Subdivision of the health treatment for the infected", caption="total data") +
+            labs(x="", y="", title="Subdivision of the health treatment for the currently positive patients", caption="total data") +
             theme_bw() +
             scale_fill_brewer(palette="Set2", labels=c("Hospitalized with symptoms", "Intensive care", "Home isolation")) +
             theme(legend.position="bottom",
                   legend.title=element_blank(),
-                  legend.text=element_text(size=10),
                   axis.title.x=element_blank(),
                   legend.margin=margin(t=0, r=0, b=0, l=-1, unit="cm"))
 
-        girafe_options(girafe(ggobj = gg_bar), opts_toolbar(saveaspng=FALSE))
+        girafe_options(girafe(ggobj = gg_bar, width_svg = 8, height_svg = 7), opts_toolbar(saveaspng=FALSE))
     })
 
 
@@ -602,7 +638,7 @@ server <- function(input, output) {
                            `DimessiGuariti` = "Discharged or healed",
                            `TerapiaIntensiva` = "Intensive care treated"
                        ))) +
-            labs(x="", y="", title=paste("% Variation from the previous day"), caption=paste("daily data (last", delayDays, "days)"))
+            labs(x="", y="", title=paste("Relative variation from the previous day"), caption=paste("daily data (last", delayDays, "days)"))
 
         girafe(ggobj = gg_bar)
     })
@@ -731,12 +767,11 @@ server <- function(input, output) {
             labs(title=paste("Deaths in the first 13 weeks of the calendar year in", input$selezionaComune), caption="weekly data") +
             theme_bw() + 
             theme(legend.position = "bottom",
-                  axis.text.x=element_text(size=8),
                   axis.title.x=element_blank(),
                   axis.title.y=element_blank(),
                   panel.grid.minor.x = element_blank()) +
             guides(colour = guide_legend(nrow = 1))
-        girafe(ggobj = gg_decessi, width_svg = 10, height_svg = 9)
+        girafe(ggobj = gg_decessi, width_svg = 9.5, height_svg = 8.5)
     })
 }
 
